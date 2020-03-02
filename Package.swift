@@ -1,9 +1,17 @@
-// swift-tools-version:4.2
-
+// swift-tools-version:5.1
+//
+// Edited:
+//  author: Filip Klembara (filip@klembara.pro)
+//  date:   2. Mar. 2020
+//  modifications: Updated swift version and platform
+//
 import PackageDescription
 
 let package = Package(
     name: "nio-apns",
+    platforms: [
+        .macOS("10.15"),
+    ],
     products: [
         .executable(
             name: "nio-apns-example",

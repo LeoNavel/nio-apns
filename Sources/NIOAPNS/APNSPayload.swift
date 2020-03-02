@@ -2,6 +2,15 @@
 //  APNSPayload.swift
 //  NIOAPNS
 //
+// Edited:
+//  author: Filip Klembara (filip@klembara.pro)
+//  date:   2. Mar. 2020
+//  modifications:
+//      APNSPayload is now generic
+//      add encode function for APNSPayload
+//      add CodingKeys
+//
+
 
 import Foundation
 
@@ -57,13 +66,26 @@ fileprivate struct Alert: Encodable {
     }
 }
 
-internal struct APNSPayload: Encodable {
+internal struct APNSPayload<T: Encodable>: Encodable {
     private var aps = APS()
-    // TODO: Find a way to include custom payload
+    private struct Body: Encodable, Hashable {
+        static func == (lhs: APNSPayload<T>.Body, rhs: APNSPayload<T>.Body) -> Bool {
+            lhs.key == rhs.key
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(key)
+        }
+
+        let key: String
+        let body: T
+    }
+    private var customKey: String?
+    // type is set because we want to prevent key duplication
+    private var customs: Set<Body> = []
     
-    init(notificationItems items: [APNSNotificationItem]) {
+    init(notificationItems items: [APNSNotificationCustomItem<T>]) {
         var alert = Alert()
-        
         for item in items {
             switch item {
             case .alertBody(let body):
@@ -101,8 +123,8 @@ internal struct APNSPayload: Encodable {
             case .threadId(let threadId):
                 aps.threadId = threadId
                 
-            case .customPayload(_, _):
-                fatalError()
+            case .customPayload(let key, let body):
+                customs.insert(.init(key: key, body: body))
                 
             case .mutableContent:
                 aps.mutableContent = 1
@@ -112,6 +134,16 @@ internal struct APNSPayload: Encodable {
         // only add alert payload if it's actually used
         aps.alert = alert.notEmpty ? alert : nil
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(aps, forKey: .aps)
+        try customs.forEach { body in
+            // never fails
+            let key = CodingKeys(stringValue: body.key)!
+            try container.encode(body.body, forKey: key)
+        }
+    }
     
     var jsonString: String? {
         guard let jsonData = try? JSONEncoder().encode(self) else {
@@ -120,4 +152,19 @@ internal struct APNSPayload: Encodable {
         
         return String(data: jsonData, encoding: .utf8)
     }
+}
+
+private struct CodingKeys: CodingKey {
+    var intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    init?(intValue: Int) {
+        return nil
+    }
+
+    var stringValue: String
+    static var aps = CodingKeys(stringValue: "aps")!
 }

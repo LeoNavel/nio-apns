@@ -2,6 +2,11 @@
 //  APNSClient.swift
 //  NIOAPNS
 //
+// Edited:
+//  author: Filip Klembara (filip@klembara.pro)
+//  date:   2. Mar. 2020
+//  modifications: Generic versions of push functions
+//
 
 import NIO
 import NIOHTTP1
@@ -54,7 +59,7 @@ public final class APNSClient {
     }
 
     // MARK:
-    
+
     /// Push one message to a single device.
     ///
     ///     let notificationItems: [APNSNotificationItem] = [.alertTitle("Hello"), .alertBody("World!")]
@@ -66,10 +71,23 @@ public final class APNSClient {
     ///     - notificationItems: A list of `APNSNotificationItem`s that represent the payload of the notification.
     /// - returns: A `EventLoopFuture` `APNSNotificationResponse` containing the server's response.
     public func push(deviceToken: String, notificationItems: [APNSNotificationItem]) -> EventLoopFuture<APNSNotificationResponse> {
+        return push(deviceToken: deviceToken, notificationItems: notificationItems.map { $0.asCustom })
+    }
+    /// Push one message to a single device.
+    ///
+    ///     let notificationItems: [APNSNotificationItem] = [.alertTitle("Hello"), .alertBody("World!")]
+    ///     let response = client.push(deviceToken: "...", notificationItems: notificationItems)
+    ///
+    /// - note: The returned future will resolve on the clients `EventLoop`.
+    /// - parameters:
+    ///     - deviceToken: The unique device token of the target device.
+    ///     - notificationItems: A list of `APNSNotificationItem`s that represent the payload of the notification.
+    /// - returns: A `EventLoopFuture` `APNSNotificationResponse` containing the server's response.
+    public func push<T>(deviceToken: String, notificationItems: [APNSNotificationCustomItem<T>]) -> EventLoopFuture<APNSNotificationResponse> {
         let payload = APNSPayload(notificationItems: notificationItems)
         return self.push(deviceToken: deviceToken, payload: payload)
     }
-    
+
     /// Push one message to multiple devices.
     ///
     ///     let notificationItems: [APNSNotificationItem] = [.alertTitle("Hello"), .alertBody("World!")]
@@ -81,6 +99,20 @@ public final class APNSClient {
     ///     - notificationItems: A list of `APNSNotificationItem`s that represent the payload of the notification.
     /// - returns: A `EventLoopFuture` `APNSNotificationResponse` containing the server's response.
     public func push(deviceTokens: [String], notificationItems: [APNSNotificationItem]) -> EventLoopFuture<[APNSNotificationResponse]> {
+        push(deviceTokens: deviceTokens, notificationItems: notificationItems.map { $0.asCustom })
+    }
+
+    /// Push one message to multiple devices.
+    ///
+    ///     let notificationItems: [APNSNotificationItem] = [.alertTitle("Hello"), .alertBody("World!")]
+    ///     let response = client.push(deviceTokens: ["...", "..."], notificationItems: notificationItems)
+    ///
+    /// - note: The returned future will resolve on the clients `EventLoop`.
+    /// - parameters:
+    ///     - deviceTokens: A list of unique device tokens of the target devices.
+    ///     - notificationItems: A list of `APNSNotificationItem`s that represent the payload of the notification.
+    /// - returns: A `EventLoopFuture` `APNSNotificationResponse` containing the server's response.
+    public func push<T>(deviceTokens: [String], notificationItems: [APNSNotificationCustomItem<T>]) -> EventLoopFuture<[APNSNotificationResponse]> {
         let payload = APNSPayload(notificationItems: notificationItems)
         return self.push(deviceTokens: deviceTokens, payload: payload)
     }
@@ -104,7 +136,7 @@ public final class APNSClient {
     }
     
     ///
-    private func push(deviceToken: String, payload: APNSPayload) -> EventLoopFuture<APNSNotificationResponse> {
+    private func push<T: Encodable>(deviceToken: String, payload: APNSPayload<T>) -> EventLoopFuture<APNSNotificationResponse> {
         guard let payloadString = payload.jsonString else {
             fatalError()
         }
@@ -119,7 +151,7 @@ public final class APNSClient {
     }
     
     ///
-    private func push(deviceTokens: [String], payload: APNSPayload) -> EventLoopFuture<[APNSNotificationResponse]> {
+    private func push<T: Encodable>(deviceTokens: [String], payload: APNSPayload<T>) -> EventLoopFuture<[APNSNotificationResponse]> {
         var futures: [EventLoopFuture<APNSNotificationResponse>] = []
         
         for deviceToken in deviceTokens {
