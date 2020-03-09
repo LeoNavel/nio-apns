@@ -11,7 +11,7 @@
 import NIO
 import NIOHTTP1
 import NIOH2
-
+import Foundation
 ///
 public final class APNSClient {
 
@@ -126,15 +126,15 @@ public final class APNSClient {
             ("apns-expiration", "\(self.expiration.rawValue)"),
             ("apns-priority", "\(self.priority.rawValue)"),
             ("apns-topic", self.apnsTopic),
-            ("authorization", self.configuration.authorizationHeader)
+            ("authorization", self.configuration.authorizationHeader),
+            ("apns-push-type", "alert")
             ])
         if let cid = self.collapseId {
             headers.add(name: "apns-collapse-id", value: cid)
         }
-        
         return headers
     }
-    
+
     ///
     private func push<T: Encodable>(deviceToken: String, payload: APNSPayload<T>) -> EventLoopFuture<APNSNotificationResponse> {
         guard let payloadString = payload.jsonString else {

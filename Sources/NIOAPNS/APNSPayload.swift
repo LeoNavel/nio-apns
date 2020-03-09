@@ -66,7 +66,7 @@ fileprivate struct Alert: Encodable {
     }
 }
 
-internal struct APNSPayload<T: Encodable>: Encodable {
+public struct APNSPayload<T: Encodable>: Encodable {
     private var aps = APS()
     private struct Body: Encodable, Hashable {
         static func == (lhs: APNSPayload<T>.Body, rhs: APNSPayload<T>.Body) -> Bool {
@@ -84,7 +84,7 @@ internal struct APNSPayload<T: Encodable>: Encodable {
     // type is set because we want to prevent key duplication
     private var customs: Set<Body> = []
     
-    init(notificationItems items: [APNSNotificationCustomItem<T>]) {
+    public init(notificationItems items: [APNSNotificationCustomItem<T>]) {
         var alert = Alert()
         for item in items {
             switch item {
@@ -135,7 +135,7 @@ internal struct APNSPayload<T: Encodable>: Encodable {
         aps.alert = alert.notEmpty ? alert : nil
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(aps, forKey: .aps)
         try customs.forEach { body in
@@ -145,12 +145,12 @@ internal struct APNSPayload<T: Encodable>: Encodable {
         }
     }
     
-    var jsonString: String? {
+    public var jsonString: String? {
         guard let jsonData = try? JSONEncoder().encode(self) else {
             return nil
         }
-        
-        return String(data: jsonData, encoding: .utf8)
+        let data = String(data: jsonData, encoding: .utf8)
+        return data
     }
 }
 
